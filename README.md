@@ -14,9 +14,19 @@ Built with Next.js (App Router) and Supabase.
 | Selah  | Only her own courses, lessons and check-offs                        |
 | Parent | Both students, all coursework, the planner and the school settings  |
 
-Everyone signs up at `/signup` with the **family code**, which a parent can
-read and change under **Parent → School settings**. A student's account links
-itself to the right roster entry by the name they pick at signup.
+Everyone signs in with **Google**, using the same account they use for Larder
+and Laundry-HQ — this Supabase project's auth is shared between those apps.
+
+Access is by invitation, not self-signup. A parent authorises an email under
+**Parent → School settings → Who can sign in**, choosing parent or student (and
+which student). If that address already has an account it connects immediately;
+otherwise the role is claimed on that person's first sign-in. Someone who signs
+in without an invite gets no homeschool access at all, so Larder and Laundry-HQ
+users are unaffected.
+
+The email-and-password path at `/signup` still exists for anyone without a
+Google account; it requires the **family code**, which a parent can read and
+change in School settings.
 
 ## The views
 
@@ -90,6 +100,7 @@ because this Supabase project is shared with another app.
 | `hs_lessons`      | A lesson on a day number, with reading and assignment       |
 | `hs_completions`  | A student's check-off, plus parent verification and grade   |
 | `hs_daily_logs`   | The student's notes for a day, and the parent's sign-off    |
+| `hs_invites`      | Emails a parent has authorised, and what role they get       |
 | `hs_settings`     | The family signup code                                      |
 
 ### Security model
@@ -103,5 +114,8 @@ database rather than in the UI:
   student cannot grade themselves or forge a parent sign-off.
 - Only a parent can create or edit courses, lessons, the roster or the
   calendar, and only a parent can read the family signup code.
-- The signup trigger is a no-op unless the signup carries `hs_role` metadata,
-  so it never interferes with the other app sharing this database's auth.
+- A new account gets homeschool access only from an explicit invite or a
+  correct family code. Signing in to the other apps on this database grants
+  nothing here.
+- `hs_claim_my_invite()` takes no arguments — it reads the caller's email from
+  their JWT, so nobody can claim an invite left for someone else.

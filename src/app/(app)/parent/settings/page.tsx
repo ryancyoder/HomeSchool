@@ -29,6 +29,15 @@ export default async function SettingsPage({
     .eq("school_year_id", viewer.year.id)
     .order("sort_order");
 
+  const { data: people } = await supabase
+    .from("hs_profiles")
+    .select("id, role, display_name")
+    .order("role");
+  const { data: invites } = await supabase
+    .from("hs_invites")
+    .select("email, role, student_id, claimed_at")
+    .order("email");
+
   const coursesByStudent = new Map<string, Course[]>();
   for (const c of (courses ?? []) as Course[]) {
     if (!coursesByStudent.has(c.student_id)) coursesByStudent.set(c.student_id, []);
@@ -67,6 +76,47 @@ export default async function SettingsPage({
 
     revalidatePath("/", "layout");
     redirect("/parent/settings?done=calendar");
+  }
+
+  async function inviteLogin(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const email = String(formData.get("email")).trim().toLowerCase();
+    const role = String(formData.get("role"));
+    const studentId = String(formData.get("student_id") || "");
+
+    if (!email) redirect("/parent/settings?error=Enter%20an%20email");
+
+    const { error } = await supabase.from("hs_invites").upsert(
+      {
+        email,
+        role: role === "parent" ? "parent" : "student",
+        student_id: role === "parent" ? null : studentId || null,
+        claimed_at: null,
+      },
+      { onConflict: "email" },
+    );
+    if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
+
+    // If that person already has an account, connect it right away.
+    const { error: rpcError } = await supabase.rpc("hs_claim_invites");
+    if (rpcError)
+      redirect(`/parent/settings?error=${encodeURIComponent(rpcError.message)}`);
+
+    revalidatePath("/", "layout");
+    redirect("/parent/settings?done=invite");
+  }
+
+  async function removeInvite(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("hs_invites")
+      .delete()
+      .eq("email", String(formData.get("email")));
+    if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
+    revalidatePath("/parent/settings");
+    redirect("/parent/settings?done=invite");
   }
 
   async function saveCode(formData: FormData) {
@@ -251,6 +301,109 @@ export default async function SettingsPage({
           </label>
           <button type="submit" className={button}>
             Save code
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-5">
+        <h2 className="font-semibold">Who can sign in</h2>
+        <p className="mt-1 text-sm text-muted">
+          Everyone signs in with the same Google account they use for Larder and
+          Laundry-HQ. Authorise an email here and the next time that person signs
+          in, they land in the right place. If they already have an account, it
+          connects immediately.
+        </p>
+
+        <ul className="mt-4 divide-y divide-[color:var(--border)] rounded-xl border border-line">
+          {(people ?? []).map((person) => {
+            const student = viewer.students.find((s) => s.user_id === person.id);
+            return (
+              <li key={person.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+                <span className="font-medium">{person.display_name}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    person.role === "parent"
+                      ? "bg-indigo-100 text-indigo-900 dark:bg-indigo-500/15 dark:text-indigo-200"
+                      : "bg-sky-100 text-sky-900 dark:bg-sky-500/15 dark:text-sky-200"
+                  }`}
+                >
+                  {person.role}
+                </span>
+                {student && (
+                  <span className="text-xs text-muted">signs in as {student.name}</span>
+                )}
+                <span className="ml-auto text-xs text-emerald-700 dark:text-emerald-400">
+                  connected
+                </span>
+              </li>
+            );
+          })}
+
+          {(invites ?? [])
+            .filter((i) => !i.claimed_at)
+            .map((invite) => {
+              const student = viewer.students.find((s) => s.id === invite.student_id);
+              return (
+                <li key={invite.email} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+                  <span className="font-medium">{invite.email}</span>
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700 dark:bg-stone-500/15 dark:text-stone-300">
+                    {invite.role}
+                  </span>
+                  {student && (
+                    <span className="text-xs text-muted">will sign in as {student.name}</span>
+                  )}
+                  <span className="ml-auto text-xs text-amber-700 dark:text-amber-400">
+                    waiting for first sign-in
+                  </span>
+                  <form action={removeInvite}>
+                    <input type="hidden" name="email" value={invite.email} />
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-line px-2 py-1 text-xs transition hover:bg-background"
+                    >
+                      Remove
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
+
+          {(people ?? []).length === 0 && (invites ?? []).length === 0 && (
+            <li className="p-3 text-sm text-muted">Nobody is set up yet.</li>
+          )}
+        </ul>
+
+        <form action={inviteLogin} className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="block min-w-56 flex-1">
+            <span className="text-xs font-medium text-muted">Email address</span>
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="name@gmail.com"
+              className={input}
+            />
+          </label>
+          <label className="block w-32">
+            <span className="text-xs font-medium text-muted">Role</span>
+            <select name="role" defaultValue="student" className={input}>
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
+            </select>
+          </label>
+          <label className="block w-40">
+            <span className="text-xs font-medium text-muted">Which student</span>
+            <select name="student_id" defaultValue="" className={input}>
+              <option value="">(parents: none)</option>
+              {viewer.students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className={button}>
+            Authorise
           </button>
         </form>
       </section>

@@ -34,11 +34,21 @@ export async function getViewer(studentParam?: string): Promise<Viewer> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("hs_profiles")
     .select("id, role, display_name")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (!profile) {
+    // A parent may have authorised this address after the session started.
+    await supabase.rpc("hs_claim_my_invite");
+    ({ data: profile } = await supabase
+      .from("hs_profiles")
+      .select("id, role, display_name")
+      .eq("id", user.id)
+      .maybeSingle());
+  }
 
   if (!profile) redirect("/login?error=no-profile");
 

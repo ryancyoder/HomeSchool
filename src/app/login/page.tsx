@@ -20,9 +20,9 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-muted">
-          First time here?{" "}
+          Use the same Google account you use for Larder and Laundry-HQ.{" "}
           <Link href="/signup" className="font-medium underline underline-offset-4">
-            Set up your login
+            Need a new login?
           </Link>
         </p>
       </div>
