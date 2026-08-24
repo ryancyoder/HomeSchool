@@ -54,9 +54,19 @@ export type Course = {
   tracks_hours: boolean;
 };
 
+export type Book = {
+  id: string;
+  course_id: string;
+  title: string;
+  author: string | null;
+  cover_url: string | null;
+  sort_order: number;
+};
+
 export type Lesson = {
   id: string;
   course_id: string;
+  book_id: string | null;
   unit_id: string | null;
   day_number: number;
   sort_order: number;

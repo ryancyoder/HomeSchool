@@ -327,3 +327,201 @@ export async function getNarrationWatermark(): Promise<string | null> {
     .maybeSingle();
   return (data as { last_seen_at: string } | null)?.last_seen_at ?? null;
 }
+
+export type LibraryBook = {
+  id: string;
+  title: string;
+  author: string | null;
+  cover_url: string | null;
+  course_name: string;
+  course_color: string;
+  notes_label: string;
+  reading_days: number;
+  days_done: number;
+  narrations: number;
+  first_day: number | null;
+  last_day: number | null;
+};
+
+/** Every book on this student's shelf, with their own progress against each. */
+export async function getLibrary(
+  studentId: string,
+  yearId: string,
+): Promise<LibraryBook[]> {
+  const supabase = await createClient();
+
+  const { data: books } = await supabase
+    .from("hs_books")
+    .select("id, title, author, cover_url, sort_order, hs_courses(name, color, notes_label, student_id, school_year_id)")
+    .order("sort_order");
+
+  const { data: progress } = await supabase.rpc("hs_book_progress", {
+    p_student_id: studentId,
+  });
+
+  const stats = new Map(
+    ((progress ?? []) as {
+      book_id: string;
+      reading_days: number;
+      days_done: number;
+      narrations: number;
+      first_day: number | null;
+      last_day: number | null;
+    }[]).map((r) => [r.book_id, r]),
+  );
+
+  return ((books ?? []) as unknown as {
+    id: string;
+    title: string;
+    author: string | null;
+    cover_url: string | null;
+    hs_courses: {
+      name: string;
+      color: string;
+      notes_label: string | null;
+      student_id: string;
+      school_year_id: string;
+    } | null;
+  }[])
+    // A parent can see every book, so narrow to the student on screen.
+    .filter(
+      (b) =>
+        b.hs_courses?.student_id === studentId &&
+        b.hs_courses?.school_year_id === yearId,
+    )
+    .map((b) => {
+      const p = stats.get(b.id);
+      return {
+        id: b.id,
+        title: b.title,
+        author: b.author,
+        cover_url: b.cover_url,
+        course_name: b.hs_courses?.name ?? "",
+        course_color: b.hs_courses?.color ?? "slate",
+        notes_label: b.hs_courses?.notes_label ?? "Narration",
+        reading_days: Number(p?.reading_days ?? 0),
+        days_done: Number(p?.days_done ?? 0),
+        narrations: Number(p?.narrations ?? 0),
+        first_day: p?.first_day ?? null,
+        last_day: p?.last_day ?? null,
+      };
+    });
+}
+
+export type BookNarration = {
+  id: string;
+  day_number: number;
+  lesson_title: string;
+  reading: string | null;
+  student_note: string;
+  note_written_at: string;
+};
+
+/** One book, plus this student's narrations for it in reading order. */
+export async function getBookWithNarrations(
+  bookId: string,
+  studentId: string,
+): Promise<{ book: LibraryBook | null; narrations: BookNarration[] }> {
+  const supabase = await createClient();
+
+  const { data: book } = await supabase
+    .from("hs_books")
+    .select("id, title, author, cover_url, hs_courses(name, color, notes_label, student_id)")
+    .eq("id", bookId)
+    .maybeSingle();
+
+  if (!book) return { book: null, narrations: [] };
+
+  const row = book as unknown as {
+    id: string;
+    title: string;
+    author: string | null;
+    cover_url: string | null;
+    hs_courses: {
+      name: string;
+      color: string;
+      notes_label: string | null;
+      student_id: string;
+    } | null;
+  };
+
+  if (row.hs_courses?.student_id !== studentId) return { book: null, narrations: [] };
+
+  const { data: progress } = await supabase.rpc("hs_book_progress", {
+    p_student_id: studentId,
+  });
+  const p = ((progress ?? []) as { book_id: string }[]).find(
+    (r) => r.book_id === bookId,
+  ) as
+    | {
+        reading_days: number;
+        days_done: number;
+        narrations: number;
+        first_day: number | null;
+        last_day: number | null;
+      }
+    | undefined;
+
+  const { data: lessons } = await supabase
+    .from("hs_lessons")
+    .select("id, day_number, title, reading")
+    .eq("book_id", bookId)
+    .order("day_number");
+
+  const lessonRows = (lessons ?? []) as {
+    id: string;
+    day_number: number;
+    title: string;
+    reading: string | null;
+  }[];
+
+  const { data: completions } = lessonRows.length
+    ? await supabase
+        .from("hs_completions")
+        .select("id, lesson_id, student_note, note_written_at")
+        .eq("student_id", studentId)
+        .not("note_written_at", "is", null)
+        .in("lesson_id", lessonRows.map((l) => l.id))
+    : { data: [] };
+
+  const byLesson = new Map(
+    ((completions ?? []) as {
+      id: string;
+      lesson_id: string;
+      student_note: string;
+      note_written_at: string;
+    }[]).map((c) => [c.lesson_id, c]),
+  );
+
+  const narrations: BookNarration[] = lessonRows
+    .filter((l) => byLesson.has(l.id))
+    .map((l) => {
+      const c = byLesson.get(l.id)!;
+      return {
+        id: c.id,
+        day_number: l.day_number,
+        lesson_title: l.title,
+        reading: l.reading,
+        student_note: c.student_note,
+        note_written_at: c.note_written_at,
+      };
+    });
+
+  return {
+    book: {
+      id: row.id,
+      title: row.title,
+      author: row.author,
+      cover_url: row.cover_url,
+      course_name: row.hs_courses?.name ?? "",
+      course_color: row.hs_courses?.color ?? "slate",
+      notes_label: row.hs_courses?.notes_label ?? "Narration",
+      reading_days: Number(p?.reading_days ?? 0),
+      days_done: Number(p?.days_done ?? 0),
+      narrations: Number(p?.narrations ?? 0),
+      first_day: p?.first_day ?? null,
+      last_day: p?.last_day ?? null,
+    },
+    narrations,
+  };
+}

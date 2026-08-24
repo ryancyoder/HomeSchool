@@ -8,6 +8,7 @@ const TABS = [
   { href: "/week", label: "This Week" },
   { href: "/calendar", label: "Calendar" },
   { href: "/courses", label: "Subjects" },
+  { href: "/library", label: "Library" },
 ];
 
 export default function NavTabs({
