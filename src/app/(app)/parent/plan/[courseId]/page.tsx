@@ -48,7 +48,11 @@ export default async function PlanCoursePage({
           {(course as Course).name}
         </h1>
         <p className="text-sm text-muted">
-          {student?.name} &middot; {viewer.year.total_days}-day plan
+          {student?.name} &middot;{" "}
+          {(course as Course).last_day - (course as Course).first_day + 1}-day plan
+          {((course as Course).first_day !== 1 ||
+            (course as Course).last_day !== viewer.year.total_days) &&
+            ` · days ${(course as Course).first_day}–${(course as Course).last_day}`}
         </p>
       </div>
 
@@ -56,7 +60,8 @@ export default async function PlanCoursePage({
         course={course as Course}
         initialLessons={(lessons ?? []) as Lesson[]}
         days={days}
-        totalDays={viewer.year.total_days}
+        firstDay={(course as Course).first_day}
+        lastDay={(course as Course).last_day}
       />
     </div>
   );

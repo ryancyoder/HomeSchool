@@ -43,6 +43,9 @@ export type Course = {
   color: string;
   credits: number | null;
   sort_order: number;
+  /** A semester course occupies a slice of the year's day numbers. */
+  first_day: number;
+  last_day: number;
 };
 
 export type Lesson = {

@@ -167,6 +167,8 @@ export default async function SettingsPage({
       textbook: String(formData.get("textbook")).trim() || null,
       color: String(formData.get("color")),
       credits: parseCredits(formData.get("credits")),
+      first_day: Number(formData.get("first_day")) || 1,
+      last_day: Number(formData.get("last_day")) || 180,
       sort_order: Number(formData.get("sort_order")) || 99,
     });
     if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
@@ -185,6 +187,8 @@ export default async function SettingsPage({
         textbook: String(formData.get("textbook")).trim() || null,
         color: String(formData.get("color")),
         credits: parseCredits(formData.get("credits")),
+        first_day: Number(formData.get("first_day")) || 1,
+        last_day: Number(formData.get("last_day")) || 180,
       })
       .eq("id", String(formData.get("course_id")));
     if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
@@ -480,6 +484,24 @@ export default async function SettingsPage({
                       className={input}
                     />
                   </label>
+                  <label className="block w-28">
+                    <span className="text-xs font-medium text-muted">Days</span>
+                    <div className="mt-1 flex items-center gap-1">
+                      <input
+                        name="first_day"
+                        inputMode="numeric"
+                        defaultValue={course.first_day}
+                        className="w-full rounded-lg border border-line bg-background px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                      />
+                      <span className="text-xs text-muted">&ndash;</span>
+                      <input
+                        name="last_day"
+                        inputMode="numeric"
+                        defaultValue={course.last_day}
+                        className="w-full rounded-lg border border-line bg-background px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                      />
+                    </div>
+                  </label>
                   <label className="block w-24">
                     <span className="text-xs font-medium text-muted">Credits</span>
                     <input
@@ -529,6 +551,24 @@ export default async function SettingsPage({
               <label className="block min-w-48 flex-1">
                 <span className="text-xs font-medium text-muted">Textbook</span>
                 <input name="textbook" className={input} />
+              </label>
+              <label className="block w-28">
+                <span className="text-xs font-medium text-muted">Days</span>
+                <div className="mt-1 flex items-center gap-1">
+                  <input
+                    name="first_day"
+                    inputMode="numeric"
+                    defaultValue={1}
+                    className="w-full rounded-lg border border-line bg-background px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                  />
+                  <span className="text-xs text-muted">&ndash;</span>
+                  <input
+                    name="last_day"
+                    inputMode="numeric"
+                    defaultValue={viewer.year.total_days}
+                    className="w-full rounded-lg border border-line bg-background px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                  />
+                </div>
               </label>
               <label className="block w-24">
                 <span className="text-xs font-medium text-muted">Credits</span>

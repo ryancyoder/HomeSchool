@@ -21,12 +21,14 @@ export default function PlanEditor({
   course,
   initialLessons,
   days,
-  totalDays,
+  firstDay,
+  lastDay,
 }: {
   course: Course;
   initialLessons: Lesson[];
   days: SchoolDay[];
-  totalDays: number;
+  firstDay: number;
+  lastDay: number;
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<number, Draft>>(() => {
@@ -52,8 +54,8 @@ export default function PlanEditor({
   );
 
   const dayNumbers = useMemo(
-    () => Array.from({ length: totalDays }, (_, i) => i + 1),
-    [totalDays],
+    () => Array.from({ length: lastDay - firstDay + 1 }, (_, i) => firstDay + i),
+    [firstDay, lastDay],
   );
 
   const plannedCount = Object.values(drafts).filter((d) => d.title.trim()).length;
@@ -126,7 +128,7 @@ export default function PlanEditor({
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card p-4">
         <p className="text-sm">
           <span className="font-medium">{plannedCount}</span>{" "}
-          <span className="text-muted">of {totalDays} days planned</span>
+          <span className="text-muted">of {dayNumbers.length} days planned</span>
         </p>
 
         <label className="flex items-center gap-2 text-sm text-muted">

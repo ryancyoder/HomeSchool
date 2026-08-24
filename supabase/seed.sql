@@ -16,22 +16,26 @@ on conflict (name) do nothing;
 
 with y as (select id from hs_school_years where is_active limit 1),
      s as (select id, name from hs_students)
-insert into hs_courses (student_id, school_year_id, name, short_name, color, credits, sort_order)
-select s.id, y.id, c.name, c.short_name, c.color, c.credits, c.sort_order
+insert into hs_courses (student_id, school_year_id, name, short_name, color,
+                        credits, sort_order, first_day, last_day)
+select s.id, y.id, c.name, c.short_name, c.color, c.credits, c.sort_order,
+       c.first_day, c.last_day
 from y, s
 join lateral (values
-  ('Seth','American Literature & Composition','Am Lit','amber',   2.0, 1),
-  ('Seth','Geometry & Algebra 2',              'Math',  'emerald', 2.0, 2),
-  ('Seth','Government & Economics',            'Gov/Econ','indigo',2.0, 3),
-  ('Seth','Life Skills',                       'Life Skills','rose',2.0,4),
-  ('Seth','Bible',                             'Bible', 'sky',     2.0, 5),
-  ('Selah','American Literature & Composition','Am Lit','amber',   2.0, 1),
-  ('Selah','Geometry',                         'Geometry','emerald',2.0,2),
-  ('Selah','Government & Economics',           'Gov/Econ','indigo', 2.0, 3),
-  ('Selah','Psychology',                       'Psych', 'fuchsia', 2.0, 4),
-  ('Selah','Bible',                            'Bible', 'sky',     2.0, 5),
-  ('Selah','Biology',                          'Biology','teal',   2.0, 6)
-) as c(student, name, short_name, color, credits, sort_order)
+  -- Seth: Geometry runs the first semester, Algebra 2 the second.
+  ('Seth','American Literature & Composition','Am Lit','amber',    2.0, 1,  1, 180),
+  ('Seth','Geometry',                         'Geometry','emerald',2.0, 2,  1,  90),
+  ('Seth','Algebra 2',                        'Algebra 2','violet',2.0, 3, 91, 180),
+  ('Seth','Government & Economics',           'Gov/Econ','indigo', 2.0, 4,  1, 180),
+  ('Seth','Life Skills',                      'Life Skills','rose',2.0, 5,  1, 180),
+  ('Seth','Bible',                            'Bible', 'sky',      2.0, 6,  1, 180),
+  ('Selah','American Literature & Composition','Am Lit','amber',   2.0, 1,  1, 180),
+  ('Selah','Geometry',                        'Geometry','emerald',2.0, 2,  1, 180),
+  ('Selah','Government & Economics',          'Gov/Econ','indigo', 2.0, 3,  1, 180),
+  ('Selah','Psychology',                      'Psych', 'fuchsia',  2.0, 4,  1, 180),
+  ('Selah','Bible',                           'Bible', 'sky',      2.0, 5,  1, 180),
+  ('Selah','Biology',                         'Biology','teal',    2.0, 6,  1, 180)
+) as c(student, name, short_name, color, credits, sort_order, first_day, last_day)
   on c.student = s.name
 on conflict (student_id, school_year_id, name) do nothing;
 

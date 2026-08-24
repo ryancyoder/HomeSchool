@@ -63,6 +63,8 @@ export default async function CoursePage({
               {c.credits != null
                 ? ` · ${c.credits} credit${Number(c.credits) === 1 ? "" : "s"}`
                 : ""}
+              {c.last_day - c.first_day + 1 < viewer.year.total_days &&
+                ` · days ${c.first_day}–${c.last_day}`}
             </p>
           </div>
         </div>
