@@ -30,6 +30,12 @@ export default function LessonCheck({
   const [passage, setPassage] = useState(
     lesson.completion?.student_passage ?? "",
   );
+  const [clockIn, setClockIn] = useState(
+    (lesson.completion?.clock_in ?? "").slice(0, 5),
+  );
+  const [clockOut, setClockOut] = useState(
+    (lesson.completion?.clock_out ?? "").slice(0, 5),
+  );
   const [saving, setSaving] = useState(false);
   const [noteState, setNoteState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
@@ -39,6 +45,17 @@ export default function LessonCheck({
 
   // Maths asks for working and questions rather than a retelling.
   const notesLabel = lesson.course.notes_label ?? "Narration";
+
+  const worked = (() => {
+    if (!clockIn || !clockOut) return null;
+    const [inH, inM] = clockIn.split(":").map(Number);
+    const [outH, outM] = clockOut.split(":").map(Number);
+    const minutes = outH * 60 + outM - (inH * 60 + inM);
+    if (!Number.isFinite(minutes) || minutes <= 0) return null;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  })();
   const notesPlaceholder =
     lesson.course.notes_label === null
       ? "Retell in your own words what you read"
@@ -50,7 +67,13 @@ export default function LessonCheck({
    * back to the column default — writing a narration on an unticked reading
    * would silently mark it done.
    */
-  async function save(nextDone: boolean, nextNote: string, nextPassage: string) {
+  async function save(
+    nextDone: boolean,
+    nextNote: string,
+    nextPassage: string,
+    nextIn: string,
+    nextOut: string,
+  ) {
     const supabase = createClient();
     return supabase.from("hs_completions").upsert(
       {
@@ -59,6 +82,8 @@ export default function LessonCheck({
         done: nextDone,
         student_note: nextNote.trim() || null,
         student_passage: nextPassage.trim() || null,
+        clock_in: nextIn || null,
+        clock_out: nextOut || null,
         completed_at: new Date().toISOString(),
       },
       { onConflict: "lesson_id,student_id" },
@@ -73,7 +98,7 @@ export default function LessonCheck({
     setSaving(true);
     setError(null);
 
-    const { error } = await save(next, note, passage);
+    const { error } = await save(next, note, passage, clockIn, clockOut);
     setSaving(false);
 
     if (error) {
@@ -89,11 +114,13 @@ export default function LessonCheck({
     if (!canCheck) return;
     const unchanged =
       note === (lesson.completion?.student_note ?? "") &&
-      passage === (lesson.completion?.student_passage ?? "");
+      passage === (lesson.completion?.student_passage ?? "") &&
+      clockIn === (lesson.completion?.clock_in ?? "").slice(0, 5) &&
+      clockOut === (lesson.completion?.clock_out ?? "").slice(0, 5);
     if (unchanged) return;
 
     setNoteState("saving");
-    const { error } = await save(done, note, passage);
+    const { error } = await save(done, note, passage, clockIn, clockOut);
     setNoteState(error ? "error" : "saved");
     if (!error) startTransition(() => router.refresh());
   }
@@ -173,6 +200,40 @@ export default function LessonCheck({
             </p>
           )}
 
+          {canCheck && lesson.course.tracks_hours && (
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="block">
+                <span className="text-xs font-medium text-muted">Clock in</span>
+                <input
+                  type="time"
+                  value={clockIn}
+                  onChange={(e) => {
+                    setClockIn(e.target.value);
+                    setNoteState("idle");
+                  }}
+                  onBlur={saveWritten}
+                  className="mt-1 rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-muted">Clock out</span>
+                <input
+                  type="time"
+                  value={clockOut}
+                  onChange={(e) => {
+                    setClockOut(e.target.value);
+                    setNoteState("idle");
+                  }}
+                  onBlur={saveWritten}
+                  className="mt-1 rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                />
+              </label>
+              {worked && (
+                <span className="pb-2 text-sm font-medium text-muted">{worked}</span>
+              )}
+            </div>
+          )}
+
           {canCheck && lesson.course.student_records_reading && (
             <label className="mt-3 block">
               <span className="text-xs font-medium text-muted">
@@ -213,6 +274,14 @@ export default function LessonCheck({
                 {noteState === "error" && "Could not save — try again."}
               </span>
             </div>
+          )}
+
+          {!canCheck && (clockIn || clockOut) && (
+            <p className="mt-3 text-sm">
+              <span className="font-medium text-muted">Hours:</span>{" "}
+              {clockIn || "—"} to {clockOut || "—"}
+              {worked ? ` · ${worked}` : ""}
+            </p>
           )}
 
           {!canCheck && passage && (

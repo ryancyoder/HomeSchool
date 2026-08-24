@@ -50,6 +50,8 @@ export type Course = {
   student_records_reading: boolean;
   /** Heading on the daily write-up box; null means "Narration". */
   notes_label: string | null;
+  /** The day is logged as hours worked rather than a reading. */
+  tracks_hours: boolean;
 };
 
 export type Lesson = {
@@ -74,6 +76,8 @@ export type Completion = {
   minutes_spent: number | null;
   student_note: string | null;
   student_passage: string | null;
+  clock_in: string | null;
+  clock_out: string | null;
   parent_verified: boolean;
   parent_note: string | null;
   grade: string | null;
