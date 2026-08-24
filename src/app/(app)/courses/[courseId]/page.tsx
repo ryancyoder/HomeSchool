@@ -60,7 +60,9 @@ export default async function CoursePage({
             <p className="text-sm text-muted">
               {viewer.student.name}
               {c.textbook ? ` · ${c.textbook}` : ""}
-              {c.credits != null ? ` · ${c.credits} credit` : ""}
+              {c.credits != null
+                ? ` · ${c.credits} credit${Number(c.credits) === 1 ? "" : "s"}`
+                : ""}
             </p>
           </div>
         </div>

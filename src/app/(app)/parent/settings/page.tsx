@@ -7,6 +7,14 @@ import { COLOR_NAMES, swatch } from "@/lib/theme";
 import { formatShort } from "@/lib/dates";
 import type { Course } from "@/lib/types";
 
+/** Blank clears the credit value; anything unparseable leaves it cleared. */
+function parseCredits(value: FormDataEntryValue | null): number | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -158,6 +166,7 @@ export default async function SettingsPage({
       short_name: String(formData.get("short_name")).trim() || null,
       textbook: String(formData.get("textbook")).trim() || null,
       color: String(formData.get("color")),
+      credits: parseCredits(formData.get("credits")),
       sort_order: Number(formData.get("sort_order")) || 99,
     });
     if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
@@ -175,6 +184,7 @@ export default async function SettingsPage({
         short_name: String(formData.get("short_name")).trim() || null,
         textbook: String(formData.get("textbook")).trim() || null,
         color: String(formData.get("color")),
+        credits: parseCredits(formData.get("credits")),
       })
       .eq("id", String(formData.get("course_id")));
     if (error) redirect(`/parent/settings?error=${encodeURIComponent(error.message)}`);
@@ -470,6 +480,15 @@ export default async function SettingsPage({
                       className={input}
                     />
                   </label>
+                  <label className="block w-24">
+                    <span className="text-xs font-medium text-muted">Credits</span>
+                    <input
+                      name="credits"
+                      inputMode="decimal"
+                      defaultValue={course.credits ?? ""}
+                      className={input}
+                    />
+                  </label>
                   <label className="block w-32">
                     <span className="text-xs font-medium text-muted">Colour</span>
                     <select name="color" defaultValue={course.color} className={input}>
@@ -510,6 +529,10 @@ export default async function SettingsPage({
               <label className="block min-w-48 flex-1">
                 <span className="text-xs font-medium text-muted">Textbook</span>
                 <input name="textbook" className={input} />
+              </label>
+              <label className="block w-24">
+                <span className="text-xs font-medium text-muted">Credits</span>
+                <input name="credits" inputMode="decimal" defaultValue="2" className={input} />
               </label>
               <label className="block w-32">
                 <span className="text-xs font-medium text-muted">Colour</span>
