@@ -64,9 +64,16 @@ assignment, `min`/`time` for minutes).
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in your Supabase URL and publishable key
 npm run dev
 ```
+
+The Supabase project URL and publishable key have safe defaults in
+`src/lib/supabase/config.ts`, so no `.env` file is needed to run against the
+family's project. That key is public by design — it ships in the browser bundle
+of every Supabase app and grants nothing on its own; Row Level Security is what
+actually decides access. To point at a different project, set
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (see
+`.env.example`); they take precedence over the defaults.
 
 ## Database
 
