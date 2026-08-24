@@ -2,7 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth",
+  // Icon and manifest routes must stay reachable signed out, or the browser
+  // gets login HTML in place of an image and shows a blank tile.
+  "/icon",
+  "/apple-icon",
+  "/manifest.webmanifest",
+];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
