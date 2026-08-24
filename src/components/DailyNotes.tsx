@@ -54,7 +54,7 @@ export default function DailyNotes({
         }}
         onBlur={save}
         rows={3}
-        placeholder="Tell back what you read today, in your own words."
+        placeholder="Retell in your own words what you read"
         className="mt-2 w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
       />
 
