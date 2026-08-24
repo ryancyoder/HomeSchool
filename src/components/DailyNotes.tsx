@@ -38,7 +38,7 @@ export default function DailyNotes({
   return (
     <section className="rounded-xl border border-line bg-card p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-medium">Notes for the day</h2>
+        <h2 className="font-medium">Narration</h2>
         {signedOff && (
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200">
             Signed off
@@ -54,7 +54,7 @@ export default function DailyNotes({
         }}
         onBlur={save}
         rows={3}
-        placeholder="Anything worth remembering — questions, what was hard, what you finished early."
+        placeholder="Tell back what you read today, in your own words."
         className="mt-2 w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
       />
 

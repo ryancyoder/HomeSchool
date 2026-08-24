@@ -173,7 +173,7 @@ async function StudentPanel({
 
       {recentLogs && recentLogs.length > 0 && (
         <>
-          <h3 className="mt-5 text-sm font-medium text-muted">Recent notes</h3>
+          <h3 className="mt-5 text-sm font-medium text-muted">Recent narrations</h3>
           <ul className="mt-2 space-y-2">
             {recentLogs.map((log) => {
               const day = log.hs_school_days as unknown as {
