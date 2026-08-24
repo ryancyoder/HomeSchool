@@ -221,40 +221,35 @@ export function pickCurrentDay(days: SchoolDay[], todayIso: string): SchoolDay |
   );
 }
 
-/** Per-course completion counts across the whole year. */
+/**
+ * Per-course completion counts across the whole year.
+ *
+ * Counted in the database rather than by fetching the lesson rows: PostgREST
+ * caps a response at 1000 rows, so a student with more lessons than that used
+ * to see silently truncated totals on their later courses.
+ */
 export async function getCourseProgress(
   studentId: string,
   courseIds: string[],
 ): Promise<Map<string, { total: number; done: number }>> {
   const out = new Map<string, { total: number; done: number }>();
+  for (const id of courseIds) out.set(id, { total: 0, done: 0 });
   if (courseIds.length === 0) return out;
 
   const supabase = await createClient();
-  const { data: lessons } = await supabase
-    .from("hs_lessons")
-    .select("id, course_id")
-    .in("course_id", courseIds);
+  const { data } = await supabase.rpc("hs_course_progress", {
+    p_student_id: studentId,
+  });
 
-  const rows = (lessons ?? []) as { id: string; course_id: string }[];
-  for (const id of courseIds) out.set(id, { total: 0, done: 0 });
-  for (const l of rows) out.get(l.course_id)!.total += 1;
-
-  if (rows.length === 0) return out;
-
-  const { data: completions } = await supabase
-    .from("hs_completions")
-    .select("lesson_id")
-    .eq("student_id", studentId)
-    .eq("done", true)
-    .in(
-      "lesson_id",
-      rows.map((l) => l.id),
-    );
-
-  const courseByLesson = new Map(rows.map((l) => [l.id, l.course_id]));
-  for (const c of (completions ?? []) as { lesson_id: string }[]) {
-    const courseId = courseByLesson.get(c.lesson_id);
-    if (courseId) out.get(courseId)!.done += 1;
+  for (const row of (data ?? []) as {
+    course_id: string;
+    total: number;
+    done: number;
+  }[]) {
+    // Only courses the caller asked about; the year filter lives with them.
+    if (out.has(row.course_id)) {
+      out.set(row.course_id, { total: Number(row.total), done: Number(row.done) });
+    }
   }
   return out;
 }
