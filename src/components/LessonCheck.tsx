@@ -25,9 +25,33 @@ export default function LessonCheck({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [done, setDone] = useState(lesson.completion?.done ?? false);
+  const [note, setNote] = useState(lesson.completion?.student_note ?? "");
   const [saving, setSaving] = useState(false);
+  const [noteState, setNoteState] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
   const [error, setError] = useState<string | null>(null);
   const s = swatch(lesson.course.color);
+
+  /**
+   * Both the tick and the narration live on one row, so every write sends both
+   * fields. Sending only one would let the insert branch of the upsert fall
+   * back to the column default — writing a narration on an unticked reading
+   * would silently mark it done.
+   */
+  async function save(nextDone: boolean, nextNote: string) {
+    const supabase = createClient();
+    return supabase.from("hs_completions").upsert(
+      {
+        lesson_id: lesson.id,
+        student_id: studentId,
+        done: nextDone,
+        student_note: nextNote.trim() || null,
+        completed_at: new Date().toISOString(),
+      },
+      { onConflict: "lesson_id,student_id" },
+    );
+  }
 
   async function toggle() {
     if (!canCheck || saving) return;
@@ -37,17 +61,7 @@ export default function LessonCheck({
     setSaving(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.from("hs_completions").upsert(
-      {
-        lesson_id: lesson.id,
-        student_id: studentId,
-        done: next,
-        completed_at: new Date().toISOString(),
-      },
-      { onConflict: "lesson_id,student_id" },
-    );
-
+    const { error } = await save(next, note);
     setSaving(false);
 
     if (error) {
@@ -59,11 +73,21 @@ export default function LessonCheck({
     startTransition(() => router.refresh());
   }
 
+  async function saveNote() {
+    if (!canCheck) return;
+    if (note === (lesson.completion?.student_note ?? "")) return;
+
+    setNoteState("saving");
+    const { error } = await save(done, note);
+    setNoteState(error ? "error" : "saved");
+    if (!error) startTransition(() => router.refresh());
+  }
+
   return (
     <li
       className={`rounded-xl border transition ${
         done
-          ? "border-line bg-card/50 opacity-70"
+          ? "border-line bg-card/50"
           : `border-line bg-card ${s.ring} hover:ring-2`
       }`}
     >
@@ -127,6 +151,36 @@ export default function LessonCheck({
           {lesson.assignment && (
             <p className="mt-1 text-sm">
               <span className="font-medium text-muted">Do:</span> {lesson.assignment}
+            </p>
+          )}
+
+          {canCheck && (
+            <div className="mt-3">
+              <label className="block">
+                <span className="text-xs font-medium text-muted">Narration</span>
+                <textarea
+                  value={note}
+                  onChange={(e) => {
+                    setNote(e.target.value);
+                    setNoteState("idle");
+                  }}
+                  onBlur={saveNote}
+                  rows={2}
+                  placeholder="Retell in your own words what you read"
+                  className="mt-1 w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+                />
+              </label>
+              <span className="text-xs text-muted">
+                {noteState === "saving" && "Saving…"}
+                {noteState === "saved" && "Saved"}
+                {noteState === "error" && "Could not save — try again."}
+              </span>
+            </div>
+          )}
+
+          {!canCheck && note && (
+            <p className="mt-3 rounded-lg bg-background px-3 py-2 text-sm">
+              <span className="font-medium text-muted">Narration:</span> {note}
             </p>
           )}
 

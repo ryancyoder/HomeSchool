@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  getDailyLog,
   getLessonsForDays,
   getSchoolDays,
   getViewer,
@@ -9,7 +8,6 @@ import {
 import { formatLong, todayISO } from "@/lib/dates";
 import { EmptyPlan, ProgressBar } from "@/components/Progress";
 import LessonCheck from "@/components/LessonCheck";
-import DailyNotes from "@/components/DailyNotes";
 
 export default async function TodayPage({
   searchParams,
@@ -34,7 +32,6 @@ export default async function TodayPage({
   const lessons = await getLessonsForDays(viewer.student.id, viewer.year.id, [
     day.day_number,
   ]);
-  const log = await getDailyLog(viewer.student.id, day.id);
 
   const doneCount = lessons.filter((l) => l.completion?.done).length;
   const isToday = day.day_date === todayISO();
@@ -107,12 +104,6 @@ export default async function TodayPage({
         </ul>
       )}
 
-      <DailyNotes
-        studentId={viewer.student.id}
-        schoolDayId={day.id}
-        initialNotes={log?.notes ?? ""}
-        signedOff={!!log?.parent_signed_off_at}
-      />
     </div>
   );
 }

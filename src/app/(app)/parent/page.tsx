@@ -89,13 +89,16 @@ async function StudentPanel({
     : [];
   const weekLessons = await getLessonsForDays(student.id, yearId, weekDayNumbers);
 
-  const { data: recentLogs } = await supabase
-    .from("hs_daily_logs")
-    .select("id, notes, submitted_at, school_day_id, hs_school_days(day_date, day_number)")
+  // Narrations now hang off each reading rather than off the day.
+  const { data: recentNarrations } = await supabase
+    .from("hs_completions")
+    .select(
+      "id, student_note, completed_at, hs_lessons(day_number, title, hs_courses(name))",
+    )
     .eq("student_id", student.id)
-    .not("notes", "is", null)
-    .neq("notes", "")
-    .order("submitted_at", { ascending: false })
+    .not("student_note", "is", null)
+    .neq("student_note", "")
+    .order("completed_at", { ascending: false })
     .limit(3);
 
   const s = swatch(student.color);
@@ -171,21 +174,24 @@ async function StudentPanel({
         )}
       </ul>
 
-      {recentLogs && recentLogs.length > 0 && (
+      {recentNarrations && recentNarrations.length > 0 && (
         <>
           <h3 className="mt-5 text-sm font-medium text-muted">Recent narrations</h3>
           <ul className="mt-2 space-y-2">
-            {recentLogs.map((log) => {
-              const day = log.hs_school_days as unknown as {
-                day_date: string;
+            {recentNarrations.map((entry) => {
+              const lesson = entry.hs_lessons as unknown as {
                 day_number: number;
+                title: string;
+                hs_courses: { name: string } | null;
               } | null;
               return (
-                <li key={log.id} className="rounded-xl border border-line p-3 text-sm">
+                <li key={entry.id} className="rounded-xl border border-line p-3 text-sm">
                   <p className="text-xs text-muted">
-                    {day ? `Day ${day.day_number} · ${formatLong(day.day_date)}` : "—"}
+                    {lesson
+                      ? `Day ${lesson.day_number} · ${lesson.hs_courses?.name ?? ""} · ${lesson.title}`
+                      : "—"}
                   </p>
-                  <p className="mt-1">{log.notes}</p>
+                  <p className="mt-1">{entry.student_note}</p>
                 </li>
               );
             })}
