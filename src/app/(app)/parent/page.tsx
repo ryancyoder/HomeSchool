@@ -176,7 +176,15 @@ async function StudentPanel({
 
       {recentNarrations && recentNarrations.length > 0 && (
         <>
-          <h3 className="mt-5 text-sm font-medium text-muted">Recent narrations</h3>
+          <h3 className="mt-5 flex items-center gap-2 text-sm font-medium text-muted">
+            Recent narrations
+            <Link
+              href="/parent/narrations"
+              className="font-normal underline underline-offset-4 transition hover:text-foreground"
+            >
+              see all
+            </Link>
+          </h3>
           <ul className="mt-2 space-y-2">
             {recentNarrations.map((entry) => {
               const lesson = entry.hs_lessons as unknown as {

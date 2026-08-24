@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getViewer } from "@/lib/data";
+import { getUnreadNarrationCount, getViewer } from "@/lib/data";
 import NavTabs from "@/components/NavTabs";
 import StudentSwitcher from "@/components/StudentSwitcher";
 
@@ -9,6 +9,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const viewer = await getViewer();
+  const unreadNarrations = viewer.isParent ? await getUnreadNarrationCount() : 0;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -31,7 +32,7 @@ export default async function AppLayout({
           </div>
         </div>
 
-        <NavTabs isParent={viewer.isParent} />
+        <NavTabs isParent={viewer.isParent} unreadNarrations={unreadNarrations} />
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>

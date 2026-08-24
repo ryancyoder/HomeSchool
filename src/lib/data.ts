@@ -253,3 +253,77 @@ export async function getCourseProgress(
   }
   return out;
 }
+
+/** Narrations written since this parent last opened the narrations page. */
+export async function getUnreadNarrationCount(): Promise<number> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("hs_unread_narrations");
+  return typeof data === "number" ? data : 0;
+}
+
+export type NarrationEntry = {
+  id: string;
+  student_note: string;
+  note_written_at: string;
+  student_name: string;
+  course_name: string;
+  course_color: string;
+  notes_label: string;
+  lesson_title: string;
+  day_number: number;
+};
+
+/** Every narration, newest first, with enough context to read it cold. */
+export async function getNarrations(limit = 60): Promise<NarrationEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("hs_completions")
+    .select(
+      "id, student_note, note_written_at, student_id, hs_lessons(day_number, title, hs_courses(name, color, notes_label))",
+    )
+    .not("note_written_at", "is", null)
+    .order("note_written_at", { ascending: false })
+    .limit(limit);
+
+  const { data: students } = await supabase.from("hs_students").select("id, name");
+  const nameById = new Map(
+    ((students ?? []) as { id: string; name: string }[]).map((s) => [s.id, s.name]),
+  );
+
+  return ((data ?? []) as unknown as {
+    id: string;
+    student_note: string;
+    note_written_at: string;
+    student_id: string;
+    hs_lessons: {
+      day_number: number;
+      title: string;
+      hs_courses: { name: string; color: string; notes_label: string | null } | null;
+    } | null;
+  }[]).map((row) => ({
+    id: row.id,
+    student_note: row.student_note,
+    note_written_at: row.note_written_at,
+    student_name: nameById.get(row.student_id) ?? "",
+    course_name: row.hs_lessons?.hs_courses?.name ?? "",
+    course_color: row.hs_lessons?.hs_courses?.color ?? "slate",
+    notes_label: row.hs_lessons?.hs_courses?.notes_label ?? "Narration",
+    lesson_title: row.hs_lessons?.title ?? "",
+    day_number: row.hs_lessons?.day_number ?? 0,
+  }));
+}
+
+/** The watermark itself, so the page can mark which entries are new. */
+export async function getNarrationWatermark(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("hs_narration_reads")
+    .select("last_seen_at")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  return (data as { last_seen_at: string } | null)?.last_seen_at ?? null;
+}

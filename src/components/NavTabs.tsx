@@ -10,7 +10,13 @@ const TABS = [
   { href: "/courses", label: "Subjects" },
 ];
 
-export default function NavTabs({ isParent }: { isParent: boolean }) {
+export default function NavTabs({
+  isParent,
+  unreadNarrations = 0,
+}: {
+  isParent: boolean;
+  unreadNarrations?: number;
+}) {
   const pathname = usePathname();
   const params = useSearchParams();
   const student = params.get("student");
@@ -35,6 +41,14 @@ export default function NavTabs({ isParent }: { isParent: boolean }) {
                 }`}
               >
                 {tab.label}
+                {tab.href === "/parent" && unreadNarrations > 0 && (
+                  <span
+                    aria-label={`${unreadNarrations} unread narrations`}
+                    className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
+                  >
+                    {unreadNarrations > 99 ? "99+" : unreadNarrations}
+                  </span>
+                )}
               </Link>
             </li>
           );
