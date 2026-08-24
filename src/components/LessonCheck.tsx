@@ -27,6 +27,9 @@ export default function LessonCheck({
   const [, startTransition] = useTransition();
   const [done, setDone] = useState(lesson.completion?.done ?? false);
   const [note, setNote] = useState(lesson.completion?.student_note ?? "");
+  const [passage, setPassage] = useState(
+    lesson.completion?.student_passage ?? "",
+  );
   const [saving, setSaving] = useState(false);
   const [noteState, setNoteState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
@@ -40,7 +43,7 @@ export default function LessonCheck({
    * back to the column default — writing a narration on an unticked reading
    * would silently mark it done.
    */
-  async function save(nextDone: boolean, nextNote: string) {
+  async function save(nextDone: boolean, nextNote: string, nextPassage: string) {
     const supabase = createClient();
     return supabase.from("hs_completions").upsert(
       {
@@ -48,6 +51,7 @@ export default function LessonCheck({
         student_id: studentId,
         done: nextDone,
         student_note: nextNote.trim() || null,
+        student_passage: nextPassage.trim() || null,
         completed_at: new Date().toISOString(),
       },
       { onConflict: "lesson_id,student_id" },
@@ -62,7 +66,7 @@ export default function LessonCheck({
     setSaving(true);
     setError(null);
 
-    const { error } = await save(next, note);
+    const { error } = await save(next, note, passage);
     setSaving(false);
 
     if (error) {
@@ -74,12 +78,15 @@ export default function LessonCheck({
     startTransition(() => router.refresh());
   }
 
-  async function saveNote() {
+  async function saveWritten() {
     if (!canCheck) return;
-    if (note === (lesson.completion?.student_note ?? "")) return;
+    const unchanged =
+      note === (lesson.completion?.student_note ?? "") &&
+      passage === (lesson.completion?.student_passage ?? "");
+    if (unchanged) return;
 
     setNoteState("saving");
-    const { error } = await save(done, note);
+    const { error } = await save(done, note, passage);
     setNoteState(error ? "error" : "saved");
     if (!error) startTransition(() => router.refresh());
   }
@@ -159,6 +166,24 @@ export default function LessonCheck({
             </p>
           )}
 
+          {canCheck && lesson.course.student_records_reading && (
+            <label className="mt-3 block">
+              <span className="text-xs font-medium text-muted">
+                Passage read
+              </span>
+              <input
+                value={passage}
+                onChange={(e) => {
+                  setPassage(e.target.value);
+                  setNoteState("idle");
+                }}
+                onBlur={saveWritten}
+                placeholder="e.g. John 3:1–21"
+                className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
+              />
+            </label>
+          )}
+
           {canCheck && (
             <div className="mt-3">
               <label className="block">
@@ -169,7 +194,7 @@ export default function LessonCheck({
                     setNote(e.target.value);
                     setNoteState("idle");
                   }}
-                  onBlur={saveNote}
+                  onBlur={saveWritten}
                   rows={2}
                   placeholder="Retell in your own words what you read"
                   className="mt-1 w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
@@ -181,6 +206,12 @@ export default function LessonCheck({
                 {noteState === "error" && "Could not save — try again."}
               </span>
             </div>
+          )}
+
+          {!canCheck && passage && (
+            <p className="mt-3 text-sm">
+              <span className="font-medium text-muted">Passage:</span> {passage}
+            </p>
           )}
 
           {!canCheck && note && (

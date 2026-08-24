@@ -46,6 +46,8 @@ export type Course = {
   /** A semester course occupies a slice of the year's day numbers. */
   first_day: number;
   last_day: number;
+  /** The student writes what they read rather than following a set plan. */
+  student_records_reading: boolean;
 };
 
 export type Lesson = {
@@ -69,6 +71,7 @@ export type Completion = {
   completed_at: string;
   minutes_spent: number | null;
   student_note: string | null;
+  student_passage: string | null;
   parent_verified: boolean;
   parent_note: string | null;
   grade: string | null;
