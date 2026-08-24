@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCourseLessons, getSchoolDays, getViewer } from "@/lib/data";
 import { formatShort, todayISO } from "@/lib/dates";
 import { swatch } from "@/lib/theme";
+import Linkify from "@/components/Linkify";
 import { EmptyPlan, ProgressBar } from "@/components/Progress";
 import type { Course } from "@/lib/types";
 
@@ -117,18 +118,20 @@ export default async function CoursePage({
                                 {lesson.title}
                               </p>
                               {lesson.description && (
-                                <p className="mt-0.5 text-muted">{lesson.description}</p>
+                                <p className="mt-0.5 text-muted">
+                                  <Linkify text={lesson.description} />
+                                </p>
                               )}
                               {lesson.reading && (
                                 <p className="mt-1">
                                   <span className="font-medium text-muted">Read:</span>{" "}
-                                  {lesson.reading}
+                                  <Linkify text={lesson.reading} />
                                 </p>
                               )}
                               {lesson.assignment && (
                                 <p className="mt-0.5">
                                   <span className="font-medium text-muted">Do:</span>{" "}
-                                  {lesson.assignment}
+                                  <Linkify text={lesson.assignment} />
                                 </p>
                               )}
                             </td>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { swatch } from "@/lib/theme";
+import Linkify from "@/components/Linkify";
 import type { LessonWithState } from "@/lib/types";
 
 type Props = {
@@ -139,18 +140,22 @@ export default function LessonCheck({
           </p>
 
           {lesson.description && (
-            <p className="mt-1 text-sm text-muted">{lesson.description}</p>
+            <p className="mt-1 text-sm text-muted">
+              <Linkify text={lesson.description} />
+            </p>
           )}
 
           {lesson.reading && (
             <p className="mt-2 text-sm">
-              <span className="font-medium text-muted">Read:</span> {lesson.reading}
+              <span className="font-medium text-muted">Read:</span>{" "}
+              <Linkify text={lesson.reading} />
             </p>
           )}
 
           {lesson.assignment && (
             <p className="mt-1 text-sm">
-              <span className="font-medium text-muted">Do:</span> {lesson.assignment}
+              <span className="font-medium text-muted">Do:</span>{" "}
+              <Linkify text={lesson.assignment} />
             </p>
           )}
 
