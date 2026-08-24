@@ -37,6 +37,13 @@ export default function LessonCheck({
   const [error, setError] = useState<string | null>(null);
   const s = swatch(lesson.course.color);
 
+  // Maths asks for working and questions rather than a retelling.
+  const notesLabel = lesson.course.notes_label ?? "Narration";
+  const notesPlaceholder =
+    lesson.course.notes_label === null
+      ? "Retell in your own words what you read"
+      : "What you worked on, and anything you got stuck on";
+
   /**
    * Both the tick and the narration live on one row, so every write sends both
    * fields. Sending only one would let the insert branch of the upsert fall
@@ -187,7 +194,7 @@ export default function LessonCheck({
           {canCheck && (
             <div className="mt-3">
               <label className="block">
-                <span className="text-xs font-medium text-muted">Narration</span>
+                <span className="text-xs font-medium text-muted">{notesLabel}</span>
                 <textarea
                   value={note}
                   onChange={(e) => {
@@ -196,7 +203,7 @@ export default function LessonCheck({
                   }}
                   onBlur={saveWritten}
                   rows={2}
-                  placeholder="Retell in your own words what you read"
+                  placeholder={notesPlaceholder}
                   className="mt-1 w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40"
                 />
               </label>
@@ -216,7 +223,7 @@ export default function LessonCheck({
 
           {!canCheck && note && (
             <p className="mt-3 rounded-lg bg-background px-3 py-2 text-sm">
-              <span className="font-medium text-muted">Narration:</span> {note}
+              <span className="font-medium text-muted">{notesLabel}:</span> {note}
             </p>
           )}
 

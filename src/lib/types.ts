@@ -48,6 +48,8 @@ export type Course = {
   last_day: number;
   /** The student writes what they read rather than following a set plan. */
   student_records_reading: boolean;
+  /** Heading on the daily write-up box; null means "Narration". */
+  notes_label: string | null;
 };
 
 export type Lesson = {
