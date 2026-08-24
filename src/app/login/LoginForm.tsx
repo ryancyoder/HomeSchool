@@ -52,7 +52,7 @@ export default function LoginForm() {
         </p>
       )}
 
-      <GoogleButton next={next} />
+      <GoogleButton />
 
       {!showPassword ? (
         <button

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function GoogleButton({ next }: { next?: string }) {
+export default function GoogleButton() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -12,12 +12,17 @@ export default function GoogleButton({ next }: { next?: string }) {
     setError(null);
 
     const supabase = createClient();
-    const callback = new URL("/auth/callback", window.location.origin);
-    if (next) callback.searchParams.set("next", next);
+
+    // Deliberately no query string. Supabase matches redirectTo against the
+    // project's allow-list literally, so a bare URL matches whether the entry
+    // is the exact callback or a /** wildcard. Anything appended here (a
+    // ?next= for instance) fails an exact-match entry and silently falls back
+    // to the project's Site URL, which is a different app on this database.
+    const redirectTo = `${window.location.origin}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callback.toString() },
+      options: { redirectTo },
     });
 
     if (error) {
@@ -41,7 +46,7 @@ export default function GoogleButton({ next }: { next?: string }) {
           />
           <path
             fill="#34A853"
-            d="M12 23.5c3.11 0 5.72-1.03 7.62-2.79l-3.72-2.89c-1.03.69-2.35 1.1-3.9 1.1-3 0-5.540-2.03-6.45-4.75H1.71v2.98A11.5 11.5 0 0 0 12 23.5Z"
+            d="M12 23.5c3.11 0 5.72-1.03 7.62-2.79l-3.72-2.89c-1.03.69-2.35 1.1-3.9 1.1-3 0-5.54-2.03-6.45-4.75H1.71v2.98A11.5 11.5 0 0 0 12 23.5Z"
           />
           <path
             fill="#FBBC05"
