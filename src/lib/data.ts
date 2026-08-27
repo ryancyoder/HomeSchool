@@ -209,6 +209,73 @@ export async function getDailyLog(
 }
 
 /**
+ * Where the calendar has reached: the number of the most recent school day on
+ * or before today. Null before the year starts, so "behind" is not computed
+ * against a year that has not begun.
+ */
+export function calendarDayNumber(
+  days: SchoolDay[],
+  todayIso: string,
+): number | null {
+  let reached: number | null = null;
+  for (const d of days) {
+    if (d.day_date <= todayIso) reached = d.day_number;
+    else break;
+  }
+  return reached;
+}
+
+/** The lowest school day still holding unfinished work, or null if none is. */
+export async function getNextUnfinishedDay(
+  studentId: string,
+): Promise<number | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("hs_next_unfinished_day", {
+    p_student_id: studentId,
+  });
+  return typeof data === "number" ? data : null;
+}
+
+export type Pace = {
+  /** The day the student is actually working on. */
+  workingDay: number;
+  /** Where the calendar has got to, or null before the year starts. */
+  calendarDay: number | null;
+  /** Positive means behind; zero on schedule; negative means further ahead. */
+  behind: number;
+  /** Nothing scheduled is left undone. */
+  finished: boolean;
+};
+
+/**
+ * Falling behind is normal, and landing on the calendar date then shows work
+ * the student has not reached yet. Pace is measured from the first unfinished
+ * day instead, which is where they should actually be looking.
+ */
+export function computePace(
+  days: SchoolDay[],
+  todayIso: string,
+  nextUnfinished: number | null,
+): Pace {
+  const calendarDay = calendarDayNumber(days, todayIso);
+  const lastDay = days.length ? days[days.length - 1].day_number : 1;
+  const firstDay = days.length ? days[0].day_number : 1;
+  const finished = nextUnfinished === null;
+
+  const workingDay = Math.min(
+    Math.max(nextUnfinished ?? calendarDay ?? firstDay, firstDay),
+    lastDay,
+  );
+
+  return {
+    workingDay,
+    calendarDay,
+    behind: calendarDay === null || finished ? 0 : calendarDay - workingDay,
+    finished,
+  };
+}
+
+/**
  * The school day to land on: today if it is a school day, otherwise the next
  * one coming up, otherwise the last day of the year.
  */

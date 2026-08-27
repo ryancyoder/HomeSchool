@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  computePace,
   getCourseProgress,
   getCourses,
   getLessonsForDays,
+  getNextUnfinishedDay,
   getSchoolDays,
   getViewer,
   pickCurrentDay,
@@ -12,7 +14,8 @@ import {
 import { formatLong, todayISO } from "@/lib/dates";
 import { swatch } from "@/lib/theme";
 import { ProgressBar } from "@/components/Progress";
-import type { Student } from "@/lib/types";
+import PaceChip from "@/components/PaceChip";
+import type { SchoolDay, Student } from "@/lib/types";
 
 export default async function ParentPage() {
   const viewer = await getViewer();
@@ -48,6 +51,7 @@ export default async function ParentPage() {
           key={student.id}
           student={student}
           yearId={viewer.year.id}
+          days={days}
           todayDayNumber={current?.day_number ?? null}
           weekDayNumbers={weekDays.map((d) => d.day_number)}
           weekNumber={current?.week_number ?? 1}
@@ -70,12 +74,14 @@ export default async function ParentPage() {
 async function StudentPanel({
   student,
   yearId,
+  days,
   todayDayNumber,
   weekDayNumbers,
   weekNumber,
 }: {
   student: Student;
   yearId: string;
+  days: SchoolDay[];
   todayDayNumber: number | null;
   weekDayNumbers: number[];
   weekNumber: number;
@@ -101,6 +107,12 @@ async function StudentPanel({
     .order("completed_at", { ascending: false })
     .limit(3);
 
+  const pace = computePace(
+    days,
+    todayISO(),
+    await getNextUnfinishedDay(student.id),
+  );
+
   const s = swatch(student.color);
   const todayDone = todayLessons.filter((l) => l.completion?.done).length;
   const weekDone = weekLessons.filter((l) => l.completion?.done).length;
@@ -111,6 +123,7 @@ async function StudentPanel({
         <span className={`size-3 rounded-full ${s.dot}`} />
         <h2 className="text-lg font-semibold">{student.name}</h2>
         {student.grade && <span className="text-sm text-muted">{student.grade}</span>}
+        <PaceChip pace={pace} />
         {!student.user_id && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">
             No login yet
